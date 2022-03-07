@@ -24,7 +24,7 @@
     "@remix-run/serve": "*",
     "@remix-run/server-runtime": "*",
     "bcryptjs": "^2.4.3",
-    "express": "^4.18.1",
+    "express": "^4.18.2",
     "get-port": "^6.1.2",
     "isbot": "^3.5.1",
     "morgan": "^1.10.0",
