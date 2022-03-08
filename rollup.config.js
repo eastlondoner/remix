@@ -692,6 +692,7 @@ function remixServerAdapters() {
     ...getAdapterConfig("architect"),
     ...getAdapterConfig("cloudflare-pages"),
     ...getAdapterConfig("cloudflare-workers"),
+    ...getAdapterConfig("gcloud-functions-gen2"),
     ...getAdapterConfig("express"),
     ...getAdapterConfig("netlify"),
     ...getAdapterConfig("vercel"),
