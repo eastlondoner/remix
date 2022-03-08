@@ -1,14 +1,21 @@
-import { 
-    Request as GcfRequest, 
-    Response as GcfResponse 
+import type { NextFunction } from "express";
+import type {
+    AppLoadContext,
+    ServerBuild,
+    ServerPlatform,
+} from "@remix-run/server-runtime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type {
+    Request as GcfRequest,
+    Response as GcfResponse,
 } from "@google-cloud/functions-framework";
+import type {
+    Response as NodeResponse,
+} from "@remix-run/node";
 import {
     // This has been added as a global in node 15+
     AbortController,
-    Headers as NodeHeaders,
-    Request as NodeRequest,
 } from "@remix-run/node";
-import { serverRuntime } from '@remix-run/server-runtime';
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -17,6 +24,11 @@ import { serverRuntime } from '@remix-run/server-runtime';
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
+export interface GetLoadContextFunction {
+    (req: GcfRequest, res: GcfResponse): AppLoadContext;
+}
+
+export type RequestHandler = ReturnType<typeof createRequestHandler>;
 
 /**
  * Returns a request handler for Express that serves the response using Remix.
@@ -24,20 +36,37 @@ import { serverRuntime } from '@remix-run/server-runtime';
 export function createRequestHandler({
     build,
     getLoadContext,
-    mode = process.env.NODE_ENV
+    mode = process.env.NODE_ENV,
+}: {
+    build: ServerBuild;
+    getLoadContext?: GetLoadContextFunction;
+    mode?: string;
 }) {
-    const platform = {};
-    const handleRequest = serverRuntime.createRequestHandler(build, platform, mode);
-    return async (req: GcfRequest, res: GcfResponse) => {
-        let abortController = new AbortController();
-        let request = createRemixRequest(req, abortController);
-        let loadContext = typeof getLoadContext === "function" ? getLoadContext(req, res) : undefined;
-        let response = await handleRequest(request, loadContext);
-        sendRemixResponse(res, response, abortController);
+    const platform: ServerPlatform = {};
+    const handleRequest = createRemixRequestHandler(build, platform, mode);
+    
+    return async (
+        req: GcfRequest,
+        res: GcfResponse,
+        next: NextFunction
+    ) => {
+        try {
+            let abortController = new AbortController();
+            let request = createRemixRequest(req, abortController);
+            let loadContext = typeof getLoadContext === "function"
+                ? getLoadContext(req, res)
+                : {};
+            let response = await handleRequest(request, loadContext) as unknown as NodeResponse;
+            sendRemixResponse(res, response, abortController);
+        } catch (error) {
+            // Express doesn't support async functions, so we have to pass along the
+            // error manually using next().
+            next(error);
+        }
     };
 }
 
-export function createRemixHeaders(requestHeaders) {
+export function createRemixHeaders(requestHeaders: GcfRequest["headers"]) {
     let headers = new Headers();
 
     for (let [key, values] of Object.entries(requestHeaders)) {
@@ -55,24 +84,24 @@ export function createRemixHeaders(requestHeaders) {
     return headers;
 }
 
-export function createRemixRequest(req: GcfRequest, abortController) {
+export function createRemixRequest(req: GcfRequest, abortController: AbortController) {
     let origin = `${req.protocol}://${req.get("host")}`;
     let url = new URL(req.url, origin);
     let init = {
         method: req.method,
         headers: createRemixHeaders(req.headers),
         signal: abortController === null || abortController === void 0 ? void 0 : abortController.signal,
-        abortController
+        abortController,
     };
 
     if (hasBody(req)) {
-        init.body = createRemixBody(req);
+        (init as { body?: Buffer }).body = createRemixBody(req);
     }
 
     return new Request(url.href, init);
 }
 
-function sendRemixResponse(res, response, abortController) {
+function sendRemixResponse(res: GcfResponse, response: NodeResponse, abortController: AbortController) {
     var _response$body;
 
     res.statusMessage = response.statusText;
