@@ -124,9 +124,10 @@ function sendRemixResponse(
     res.set("Connection", "close");
   }
 
-  if (Buffer.isBuffer(nodeResponse.body)) {
-    res.end(nodeResponse.body);
+  if (Buffer.isBuffer(nodeResponse.body) || typeof nodeResponse.body === 'string') {
+    res.send(nodeResponse.body);
   } else if (nodeResponse.body?.pipe) {
+    nodeResponse.body.on('end', res.end);
     nodeResponse.body.pipe(res);
   } else {
     res.end();

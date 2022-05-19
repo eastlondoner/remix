@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/gcloud-functions-gen2",
-  "description": "Google Cloud Functions (gen2) request handler for Remix",
-  "version": "1.2.3",
+  "name": "remix-adapter-gcf-gen2",
+  "description": "Unofficial Google Cloud Functions (gen2) request handler for Remix",
+  "version": "0.0.7",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/remix-run/remix",
+    "url": "https://github.com/eastlondoner/remix",
     "directory": "packages/remix-gcloud-functions-gen2"
   },
   "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
+    "url": "https://github.com/eastlondoner/remix/issues"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "3.1.1",
