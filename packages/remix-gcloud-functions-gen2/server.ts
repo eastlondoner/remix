@@ -4,16 +4,21 @@ import type {
   Request as GcfRequest,
   Response as GcfResponse,
 } from "@google-cloud/functions-framework";
-import type { Response as NodeResponse } from "@remix-run/node";
+import type { 
+  RequestInit as NodeRequestInit,
+  Response as NodeResponse
+ } from "@remix-run/node";
 import {
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  writeReadableStreamToWritable
 } from "@remix-run/node";
 import {
   // This has been added as a global in node 15+
   AbortController,
 } from "@remix-run/node";
+import { Readable } from 'stream'
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -26,7 +31,12 @@ export interface GetLoadContextFunction {
   (req: GcfRequest, res: GcfResponse): AppLoadContext;
 }
 
-export type RequestHandler = ReturnType<typeof createRequestHandler>;
+//export type RequestHandler = ReturnType<typeof createRequestHandler>;
+export type RequestHandler = (
+  req: GcfRequest,
+  res: GcfResponse,
+  next: NextFunction
+) => Promise<void>;
 
 /**
  * Returns a request handler for Express that serves the response using Remix.
@@ -39,22 +49,23 @@ export function createRequestHandler({
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
-}) {
-  const handleRequest = createRemixRequestHandler(build, mode);
+}): RequestHandler {
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (req: GcfRequest, res: GcfResponse, next: NextFunction) => {
     try {
-      let abortController = new AbortController();
-      let request = createRemixRequest(req, abortController);
+      let request = createRemixRequest(req);
       let loadContext =
         typeof getLoadContext === "function"
           ? getLoadContext(req, res)
           : undefined;
+
       let response = (await handleRequest(
-        request as unknown as Request,
+        request,
         loadContext
-      )) as unknown as NodeResponse;
-      sendRemixResponse(res, response, abortController);
+      )) as NodeResponse;
+
+      await sendRemixResponse(res, response);
     } catch (error) {
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
@@ -71,11 +82,11 @@ export function createRemixHeaders(
   for (let [key, values] of Object.entries(requestHeaders)) {
     if (values) {
       if (Array.isArray(values)) {
-        for (const value of values) {
+        for (let value of values) {
           headers.append(key, value);
         }
       } else {
-        headers.set(key, values);
+        headers.set(key, values as any);
       }
     }
   }
@@ -85,50 +96,44 @@ export function createRemixHeaders(
 
 export function createRemixRequest(
   req: GcfRequest,
-  abortController: AbortController
-) {
+): NodeRequest {
   let origin = `${req.protocol}://${req.get("host")}`;
   let url = new URL(req.url, origin);
-  let init = {
+
+  let controller = new AbortController();
+
+  req.on("close", () => {
+    controller.abort();
+  });
+
+  let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    signal:
-      abortController === null || abortController === void 0
-        ? void 0
-        : abortController.signal,
-    abortController,
+    signal: controller.signal,
   };
 
   if (hasBody(req)) {
-    (init as { body?: Buffer }).body = createRemixBody(req);
+    init.body = createRemixBody(req);
   }
 
   return new NodeRequest(url.href, init);
 }
 
-function sendRemixResponse(
+async function sendRemixResponse(
   res: GcfResponse,
   nodeResponse: NodeResponse,
-  abortController: AbortController
-) {
+): Promise<void> {
   res.statusMessage = nodeResponse.statusText;
   res.status(nodeResponse.status);
 
   for (let [key, values] of Object.entries(nodeResponse.headers.raw())) {
-    for (const value of values) {
+    for (let value of values) {
       res.append(key, value);
     }
   }
 
-  if (abortController.signal.aborted) {
-    res.set("Connection", "close");
-  }
-
-  if (Buffer.isBuffer(nodeResponse.body) || typeof nodeResponse.body === 'string') {
-    res.send(nodeResponse.body);
-  } else if (nodeResponse.body?.pipe) {
-    nodeResponse.body.on('end', res.end);
-    nodeResponse.body.pipe(res);
+  if (nodeResponse.body) {
+    await writeReadableStreamToWritable(nodeResponse.body, res);
   } else {
     res.end();
   }
@@ -140,12 +145,15 @@ function sendRemixResponse(
  *
  * @param req the request passed in from the Google Cloud Function
  */
-function createRemixBody(req: GcfRequest): Buffer {
-  return Buffer.from(new URLSearchParams(req.body).toString());
+function createRemixBody(req: GcfRequest) {
+  let s = new Readable()
+  s.push((new URLSearchParams(req.body).toString()).toString());
+  s.push(null);
+  return s;
 }
 
 function hasBody(req: GcfRequest): boolean {
-  const body = req.body;
+  let body = req.body;
   if (!body) {
     return false;
   }
