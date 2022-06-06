@@ -9,6 +9,7 @@ module.exports = {
     "packages/remix-dev",
     "packages/remix-architect",
     "packages/remix-express",
+    "packages/remix-gcloud-functions-gen2",
     "packages/remix-netlify",
     "packages/remix-vercel",
     "packages/remix-node",

@@ -1,4 +1,3 @@
-import type { NextFunction } from "express";
 import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
 import type {
   Request as GcfRequest,
@@ -34,8 +33,7 @@ export interface GetLoadContextFunction {
 //export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export type RequestHandler = (
   req: GcfRequest,
-  res: GcfResponse,
-  next: NextFunction
+  res: GcfResponse
 ) => Promise<void>;
 
 /**
@@ -52,25 +50,16 @@ export function createRequestHandler({
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return async (req: GcfRequest, res: GcfResponse, next: NextFunction) => {
-    try {
-      let request = createRemixRequest(req);
-      let loadContext =
-        typeof getLoadContext === "function"
-          ? getLoadContext(req, res)
-          : undefined;
+  return async (req: GcfRequest, res: GcfResponse) => {
+    let request = createRemixRequest(req);
+    let loadContext =
+      typeof getLoadContext === "function"
+        ? getLoadContext(req, res)
+        : undefined;
 
-      let response = (await handleRequest(
-        request,
-        loadContext
-      )) as NodeResponse;
+    let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
-      await sendRemixResponse(res, response);
-    } catch (error) {
-      // Express doesn't support async functions, so we have to pass along the
-      // error manually using next().
-      next(error);
-    }
+    await sendRemixResponse(res, response);
   };
 }
 
