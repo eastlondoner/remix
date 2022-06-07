@@ -6,13 +6,14 @@ import type {
 } from "@google-cloud/functions-framework";
 import type { 
   RequestInit as NodeRequestInit,
-  Response as NodeResponse,
+  
  } from "@remix-run/node";
 import {
   AbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  Response as NodeResponse,
   writeReadableStreamToWritable
 } from "@remix-run/node";
 import { Readable } from 'stream'
@@ -62,9 +63,8 @@ export function createRequestHandler({
 
       await sendRemixResponse(res, response);
     } catch (error) {
-      // Express doesn't support async functions, so we have to pass along the
-      // error manually using next().
-      // next(error);
+        console.error(error);
+        await sendRemixResponse(res ,new NodeResponse("Internal Error", { status: 500 }));
     }
   };
 }
