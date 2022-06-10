@@ -15,7 +15,7 @@ import {
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
-// puppetteer tests do), we just want to test the express adapter
+// puppetteer tests do), we just want to test the Google Cloud Functions adapter
 jest.mock("@remix-run/node", () => {
   let original = jest.requireActual("@remix-run/node");
   return {
@@ -132,7 +132,7 @@ describe("google-cloud-functions createRequestHandler", () => {
 });
 
 describe("google-cloud-functions createRemixHeaders", () => {
-  describe("creates fetch headers from express headers", () => {
+  describe("creates fetch headers from Google Cloud Functions headers", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
         Headers {
@@ -222,7 +222,7 @@ describe("google-cloud-functions createRemixHeaders", () => {
 
 describe("google-cloud-functions createRemixRequest", () => {
   it("creates a request with the correct headers", async () => {
-    let expressRequest = createRequest({
+    let request = createRequest({
       url: "/foo/bar",
       method: "GET",
       protocol: "http",
@@ -233,7 +233,7 @@ describe("google-cloud-functions createRemixRequest", () => {
       },
     });
 
-    expect(createRemixRequest(expressRequest)).toMatchInlineSnapshot(`
+    expect(createRemixRequest(request)).toMatchInlineSnapshot(`
       NodeRequest {
         "agent": undefined,
         "compress": true,

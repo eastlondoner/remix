@@ -23,9 +23,10 @@ import {
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export interface GetLoadContextFunction {
-  (req: GcfRequest, res: GcfResponse): AppLoadContext;
-}
+export type GetLoadContextFunction = (
+  req: GcfRequest,
+  res: GcfResponse
+) => AppLoadContext;
 
 export type RequestHandler = (
   req: GcfRequest,
@@ -33,7 +34,7 @@ export type RequestHandler = (
 ) => Promise<void>;
 
 /**
- * Returns a request handler for Express that serves the response using Remix.
+ * Returns a request handler for Google Cloud Functions that serves the response using Remix.
  */
 export function createRequestHandler({
   build,
