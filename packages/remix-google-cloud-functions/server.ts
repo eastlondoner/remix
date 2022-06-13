@@ -48,23 +48,18 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (req: GcfRequest, res: GcfResponse) => {
-    try {
-      let request = createRemixRequest(req);
-      let loadContext =
-        typeof getLoadContext === "function"
-          ? getLoadContext(req, res)
-          : undefined;
+    let request = createRemixRequest(req);
+    let loadContext =
+      typeof getLoadContext === "function"
+        ? getLoadContext(req, res)
+        : undefined;
 
-      let response = (await handleRequest(
-        request,
-        loadContext
-      )) as NodeResponse;
+    let response = (await handleRequest(
+      request,
+      loadContext
+    )) as NodeResponse;
 
-      await sendRemixResponse(res, response);
-    } catch (error) {
-        console.error(error);
-        await sendRemixResponse(res ,new NodeResponse("Internal Error", { status: 500 }));
-    }
+    return sendRemixResponse(res, response);
   };
 }
 
