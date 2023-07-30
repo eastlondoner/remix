@@ -1,6 +1,6 @@
 {
   "name": "gcloud-functions-gen2",
-  "version": "1.19.1-dev-1",
+  "version": "1.19.1-dev-2",
   "description": "Google Cloud Functions server request handler for Remix",
   "bugs": {
     "url": "https://github.com/eastlondoner/remix/issues"
