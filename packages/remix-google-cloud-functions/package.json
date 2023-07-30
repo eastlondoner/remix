@@ -1,6 +1,6 @@
 {
   "name": "gcloud-functions-gen2",
-  "version": "1.19.1-dev-0",
+  "version": "1.19.1-dev-1",
   "description": "Google Cloud Functions server request handler for Remix",
   "bugs": {
     "url": "https://github.com/eastlondoner/remix/issues"
@@ -11,6 +11,7 @@
     "directory": "packages/remix-google-cloud-functions"
   },
   "license": "MIT",
+  "main": "dist/index.js",
   "dependencies": {
     "@remix-run/node": "1.19.1"
   },
